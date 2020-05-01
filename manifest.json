@@ -1,0 +1,38 @@
+{
+    "name": "Nyzo",
+    "version": "1",
+    "description": "Send tips with Nyzo",
+
+    "permissions": [
+        "activeTab",
+        "storage"
+    ],
+
+    "browser_action": {
+        "default_title": "Send a Nyzo tip",
+        "default_icon": {
+            "16": "images/nyzo-logo-16.png",
+            "32": "images/nyzo-logo-32.png",
+            "48": "images/nyzo-logo-48.png",
+            "128": "images/nyzo-logo-128.png"
+        },
+        "default_popup": "popup.html"
+    },
+
+    "homepage_url": "https://tech.nyzo.co/setupInstructions/chromeBrowserExtension",
+
+    "icons": {
+        "16": "images/nyzo-logo-16.png",
+        "32": "images/nyzo-logo-32.png",
+        "48": "images/nyzo-logo-48.png",
+        "128": "images/nyzo-logo-128.png"
+    },
+
+    "content_scripts": [{
+        "js": ["util.js", "extensionUtil.js", "content.js"],
+        "matches": ["<all_urls>"]
+    }],
+
+    "options_page": "options.html",
+    "manifest_version": 2
+}

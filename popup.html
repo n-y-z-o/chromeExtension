@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+<head>
+    <title>Nyzo tip extension popup</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <script src="sha256.min.js"></script>
+    <script src="nacl.min.js"></script>
+    <script src="byteBuffer.js"></script>
+    <script src="nyzoString.js"></script>
+    <script src="transaction.js"></script>
+    <script src="util.js"></script>
+    <script src="extensionUtil.js"></script>
+    <script src="popup.js"></script>
+</head>
+
+<body style="width: 20rem; text-align: center;">
+    <h1>Send a Nyzo tip</h1>
+    <div style="width: 100%; height: 0.5rem;"></div>
+    <div id="send-tip-container" class="container">
+        <div id="send-tip-1x" class="hover-button" style="width: 10rem;">send 1x tip</div>
+        <div id="send-tip-2x" class="hover-button" style="width: 10rem;">send 2x tip</div>
+        <div id="send-tip-5x" class="hover-button" style="width: 10rem;">send 5x tip</div>
+        <div style="width: 100%; height: 0.3rem;"></div>
+        <p id="receiver-id" style="word-break: break-all; color: #999;">receiver ID: ---</p>
+        <p id="client-url" style="word-break: break-all; color: #999;">client URL: ---</p>
+    </div>
+    <div id="configure-notice" class="hover-button" style="margin-bottom: 0.8rem;">
+        Click to configure
+    </div>
+    <div id="page-no-tips-notice" class="notice" style="width: 8rem; margin: auto; margin-bottom: 0.5rem;">
+        This page does not accept Nyzo tips
+    </div>
+    <div id="result-container" class="container" style="display: none;">
+        <img id="result-icon" src="images/result-success-256.png"
+             style="width: 5rem; height: 5rem; opacity: 0.1; margin-bottom: 1rem;">
+        <div id="result-errors" class="notice notice-error"
+             style="width: 14rem; margin: auto; margin-bottom: 0.5rem; display: none;">
+        </div>
+        <div id="result-warnings" class="notice notice-warning"
+             style="width: 14rem; margin: auto; margin-bottom: 0.5rem; display: none;">
+        </div>
+        <div id="result-messages" class="notice notice-success"
+             style="width: 14rem; margin: auto; margin-bottom: 0.5rem;">
+            Sending...
+        </div>
+    </div>
+</body>
+
+</html>
