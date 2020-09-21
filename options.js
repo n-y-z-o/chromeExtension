@@ -7,22 +7,32 @@ document.addEventListener('DOMContentLoaded', function () {
     var baseTipField = document.getElementById('baseTip');
     baseTipField.addEventListener('input', validateAndStoreBaseTip);
 
+    // Register the listener for the maximum Micropay amount.
+    var maximumMicropayAmountField = document.getElementById('maximumMicropayAmount');
+    maximumMicropayAmountField.addEventListener('input', validateAndStoreMaximumMicropayAmount);
+
     // Load the values.
-    chrome.storage.local.get(null, function(items) {
-        var privateKey = items['privateKey'];
+    chrome.storage.local.get(['privateKey', 'baseTip', 'maximumMicropayAmount'], function(items) {
+        var privateKey = items.privateKey;
         if (typeof privateKey === 'string' && privateKey.length > 0) {
             privateKeyField.value = privateKey;
         } else {
             privateKeyField.value = 'key_';
         }
 
-        var baseTip = items['baseTip'];
+        var baseTip = items.baseTip;
         if (baseTip != null) {
             baseTipField.value = baseTip;
         }
 
+        var maximumMicropayAmount = items.maximumMicropayAmount;
+        if (maximumMicropayAmount != null) {
+            maximumMicropayAmountField.value = maximumMicropayAmount;
+        }
+
         validateAndStorePrivateKey();
         validateAndStoreBaseTip();
+        validateAndStoreMaximumMicropayAmount();
     });
 });
 
@@ -57,4 +67,15 @@ function validateAndStoreBaseTip() {
         baseTipField.className = 'input input-invalid';
     }
     chrome.storage.local.set({baseTip: baseTipValue});
+}
+
+function validateAndStoreMaximumMicropayAmount() {
+    var maximumMicropayAmountField = document.getElementById('maximumMicropayAmount');
+    var maximumMicropayAmountValue = maximumMicropayAmountField.value;
+    if (isValidMaximumMicropayAmount(maximumMicropayAmountValue)) {
+        maximumMicropayAmountField.className = 'input input-valid';
+    } else {
+        maximumMicropayAmountField.className = 'input input-invalid';
+    }
+    chrome.storage.local.set({maximumMicropayAmount: maximumMicropayAmountValue});
 }

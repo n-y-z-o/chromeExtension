@@ -85,4 +85,21 @@ class Transaction {
 
         return buffer.toArray();
     }
+
+    static fromBytes(array) {
+        const buffer = new ByteBuffer();
+        buffer.initializeWithArray(array);
+
+        const transaction = new Transaction();
+        buffer.readShort();
+        transaction.setTimestamp(buffer.readLong());
+        transaction.setAmount(buffer.readLong);
+        transaction.setRecipientIdentifier(buffer.readBytes(32));
+        transaction.setPreviousHashHeight(buffer.readLong());
+        const dataLength = buffer.readByte();
+        transaction.setSenderData(buffer.readBytes(dataLength));
+        transaction.signature = buffer.readBytes(64);
+
+        return transaction;
+    }
 }

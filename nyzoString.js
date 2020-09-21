@@ -100,13 +100,15 @@ function decode(encodedString) {
             var contentBytes = expandedArray.subarray(headerLength, expandedArray.length - checksumLength);
 
             // Make the object from the content array.
-            if (prefix == 'key_') {
+            if (prefix === 'key_') {
                 result = new NyzoStringPrivateSeed(contentBytes);
-            } else if (prefix == 'id__') {
+            } else if (prefix === 'id__') {
                 result = new NyzoStringPublicIdentifier(contentBytes);
-            } else if (prefix == 'pre_') {
+            } else if (prefix === 'pre_') {
                 result = new NyzoStringPrefilledData(contentBytes.subarray(0, 32),
                     contentBytes.subarray(33, contentBytes.length));
+            } else if (prefix === 'tx__') {
+                result = Transaction.fromBytes(contentBytes);
             }
         }
     }

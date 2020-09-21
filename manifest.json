@@ -1,7 +1,7 @@
 {
     "name": "Nyzo",
-    "version": "1",
-    "description": "Send tips with Nyzo",
+    "version": "2",
+    "description": "Send tips and pay for content with Nyzo",
 
     "permissions": [
         "activeTab",
@@ -29,7 +29,10 @@
     },
 
     "content_scripts": [{
-        "js": ["util.js", "extensionUtil.js", "content.js"],
+        "js": ["sha256.min.js", "nacl.min.js", "byteBuffer.js", "transaction.js", "util.js", "nyzoString.js",
+            "extensionUtil.js", "micropayConfiguration.js", "content.js"],
+
+
         "matches": ["<all_urls>"]
     }],
 

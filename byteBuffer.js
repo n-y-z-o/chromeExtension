@@ -5,6 +5,11 @@ class ByteBuffer {
         this.array = new Uint8Array(Math.max(maximumSize, 1));
     }
 
+    initializeWithArray(bytes) {
+        this.index = 0;
+        this.array = bytes;
+    }
+
     putBytes(bytes) {
         for (var i = 0; i < bytes.length; i++) {
             this.array[this.index++] = bytes[i];
@@ -16,7 +21,6 @@ class ByteBuffer {
     }
 
     putIntegerValue(value, length) {
-
         value = Math.floor(value);
         for (var i = 0; i < length; i++) {
             this.array[this.index + length - 1 - i] = value % 256;
@@ -44,5 +48,39 @@ class ByteBuffer {
         }
 
         return result;
+    }
+
+    readBytes(length) {
+        const result = new Uint8Array(length);
+        for (var i = 0; i < length; i++) {
+            result[i] = this.array[this.index++];
+        }
+
+        return result;
+    }
+
+    readByte() {
+        return this.array[this.index++];
+    }
+
+    readIntegerValue(length) {
+        var result = 0;
+        for (var i = 0; i < length; i++) {
+            result *= 256;
+            result += this.array[this.index + length - i - 1];
+        }
+        this.index += length;
+    }
+
+    readShort() {
+        return this.readIntegerValue(2);
+    }
+
+    readInt() {
+        return this.readIntegerValue(4);
+    }
+
+    readLong() {
+        return this.readIntegerValue(8);
     }
 }

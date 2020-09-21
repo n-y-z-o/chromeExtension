@@ -1,3 +1,5 @@
+const genesisBlockHash = hexStringAsUint8Array('bc4cca2a2a50a229-256ae3f5b2b5cd49-aa1df1e2d0192726-c4bb41cdcea15364');
+
 function isValidPrivateKey(keyString) {
     var valid = false;
     if (typeof keyString === 'string') {
@@ -20,13 +22,18 @@ function isValidPublicIdentifier(identifierString) {
     return valid;
 }
 
-function getTipAmountMicronyzos(tipString) {
-    return Math.floor(+tipString * 1000000);
+function getAmountMicronyzos(valueString) {
+    return Math.floor(+valueString * 1000000);
 }
 
 function isValidTipAmount(tipString) {
-    var tipAmountMicronyzos = getTipAmountMicronyzos(tipString);
-    return tipAmountMicronyzos >= 2 && tipAmountMicronyzos <= 100 * 1000000;
+    var tipAmountMicronyzos = getAmountMicronyzos(tipString);
+    return tipAmountMicronyzos >= 2 && tipAmountMicronyzos <= 10 * 1000000;
+}
+
+function isValidMaximumMicropayAmount(micropayString) {
+    var maximumAmountMicronyzos = getAmountMicronyzos(micropayString);
+    return maximumAmountMicronyzos >= 2 && maximumAmountMicronyzos <= 50 * 1000000;
 }
 
 function isValidClientUrl(clientUrl) {
@@ -57,31 +64,44 @@ function cleanTag(tag) {
     if (typeof tag !== 'string') {
         tag = '';
     }
-    return tag.replace(/[^\w_]/g, '');
+    return tag.replace(/[^\w_]/g, '').substring(0, 32);
 }
 
-function submitTransaction(timestamp, senderPrivateSeed, previousHashHeight, previousBlockHash, receiverIdentifier,
-    micronyzosToSend, senderData, endpoint, callback) {
+function cleanDisplayName(name) {
+    if (typeof name !== 'string') {
+        name = '';
+    }
+    return name.replace(/[^\w_ ]/g, '');
+}
+
+function submitTransaction(timestamp, senderPrivateSeed, receiverIdentifier, micronyzosToSend, senderData, endpoint,
+    callback) {
 
     // Create and sign the transaction.
     var transaction = new Transaction();
     transaction.setTimestamp(timestamp);
     transaction.setAmount(micronyzosToSend);
     transaction.setRecipientIdentifier(receiverIdentifier);
-    transaction.setPreviousHashHeight(previousHashHeight);
-    transaction.setPreviousBlockHash(previousBlockHash);
+    transaction.setPreviousHashHeight(0);
+    transaction.setPreviousBlockHash(genesisBlockHash);
     transaction.setSenderData(senderData);
     transaction.sign(senderPrivateSeed);
 
     var httpRequest = new XMLHttpRequest();
+    var transactionString = nyzoStringFromTransaction(transaction.getBytes(true));
     httpRequest.onreadystatechange = function() {
         if (this.readyState == 4) {  // 4 == "DONE"
-            var result = JSON.parse(this.responseText);
+            var result = null;
+            try {
+                result = JSON.parse(this.responseText);
+            } catch (exception) {
+                errors = ['The response from the server was not valid.'];
+            }
             var success = false;
             var messages = null;
             var warnings = null;
             var errors = null;
-            if (typeof result === 'object') {
+            if (typeof result === 'object' && result != null) {
                 // Store the warnings and errors.
                 if (typeof result.errors === 'object') {
                     errors = result.errors;
@@ -103,7 +123,7 @@ function submitTransaction(timestamp, senderPrivateSeed, previousHashHeight, pre
 
             // Ensure some feedback is provided.
             if (messages === null && warnings === null && errors === null) {
-                errors = ['The tip failed to send.'];
+                errors = ['The transaction failed to send.'];
             }
             if (messages === null) {
                 messages = [];
@@ -112,12 +132,30 @@ function submitTransaction(timestamp, senderPrivateSeed, previousHashHeight, pre
                 warnings = [];
             }
 
-            callback(success, messages, warnings, errors);
+            callback(success, messages, warnings, errors, transactionString);
         }
     };
 
-    var transactionString = nyzoStringFromTransaction(transaction.getBytes(true));
     var fullUrl = endpoint + '?transaction=' + transactionString;
     httpRequest.open('GET', fullUrl, true);
     httpRequest.send();
+}
+
+function createSupplementalTransaction(referenceTransaction, senderPrivateSeed) {
+    // Create and sign the transaction with a current timestamp, an amount of 0, and all other fields the same as the
+    // reference transaction.
+    const supplementalTransaction = new Transaction();
+    supplementalTransaction.setTimestamp(Date.now());
+    supplementalTransaction.setAmount(1);
+    supplementalTransaction.setRecipientIdentifier(referenceTransaction.recipientIdentifier);
+    supplementalTransaction.setPreviousHashHeight(0);
+    supplementalTransaction.setPreviousBlockHash(genesisBlockHash);
+    supplementalTransaction.setSenderData(referenceTransaction.senderData);
+    supplementalTransaction.sign(senderPrivateSeed);
+
+    return supplementalTransaction;
+}
+
+function isUndefined(value) {
+    return value === void(0);
 }

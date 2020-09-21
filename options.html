@@ -11,7 +11,7 @@
 </head>
 <body>
     <h1>
-        Nyzo tip extension options
+        Nyzo extension options
     </h1>
 
     <div class="container">
@@ -21,13 +21,20 @@
         <label class="label" for="baseTip">base tip amount, in Nyzos</label>
         <input autocomplete="off" id="baseTip" class="input" spellcheck="false">
 
+        <label class="label" for="maximumMicropayAmount">maximum Micropay amount, in Nyzos</label>
+        <input autocomplete="off" id="maximumMicropayAmount" class="input" spellcheck="false">
+
         <div class="notice">
             This displays a dialog with options for 1x, 2x, and 5x the base tip amount. So, with a base tip amount of
             &cap;0.1, the dialog provides options of &cap;0.1, &cap;0.2, and &cap;0.5.
         </div>
 
         <div class="notice">
-            The tip amount must be at least &cap;0.000002 and no more than &cap;100.000000.
+            The tip amount must be at least &cap;0.000002 and no more than &cap;10.000000.
+        </div>
+
+        <div class="notice">
+            The maximum Micropay amount must be at least &cap;0.000002 and no more than &cap;50.000000.
         </div>
     </div>
 </body>
