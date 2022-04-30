@@ -48,6 +48,7 @@ function initializeExtension() {
             sendResponse({tipConfiguration: tipConfiguration, micropayConfigurations: micropayConfigurations});
         } else if (request.action === 'micropayTransactionAvailable') {
             const uniqueReferenceKey = request.uniqueReferenceKey;
+            const tag = request.tag;
 
             chrome.storage.local.get([uniqueReferenceKey, 'privateKey'], function(extensionConfiguration) {
                 const privateKey = decode(extensionConfiguration.privateKey).getSeed();
@@ -55,7 +56,8 @@ function initializeExtension() {
                 const transaction = extensionConfiguration[uniqueReferenceKey];
                 const supplementalTransaction = createSupplementalTransaction(decode(transaction), privateKey);
                 const detailObject = {transaction: transaction,
-                    supplementalTransaction: nyzoStringFromTransaction(supplementalTransaction.getBytes(true))};
+                    supplementalTransaction: nyzoStringFromTransaction(supplementalTransaction.getBytes(true)),
+                    tag: tag};
                 const event = new CustomEvent('micropayTransactionAvailable', { detail: detailObject });
                 document.dispatchEvent(event);
             });

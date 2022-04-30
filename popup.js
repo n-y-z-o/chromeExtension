@@ -225,7 +225,7 @@ function sendTransaction(button) {
 
                         // Notify the content script that the transaction is available.
                         chrome.tabs.sendMessage(tab.id, {action: 'micropayTransactionAvailable',
-                            uniqueReferenceKey: uniqueReferenceKey}, null);
+                            uniqueReferenceKey: uniqueReferenceKey, tag: micropayConfiguration.tag}, null);
                     });
                 }
             );
@@ -244,7 +244,7 @@ function resendTransaction(button) {
 
             // Notify the content script that the transaction is available.
             chrome.tabs.sendMessage(tab.id, {action: 'micropayTransactionAvailable',
-                uniqueReferenceKey: uniqueReferenceKey}, null);
+                uniqueReferenceKey: uniqueReferenceKey, tag: micropayConfiguration.tag}, null);
         });
     }
 }

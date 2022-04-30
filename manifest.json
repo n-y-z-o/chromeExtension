@@ -1,6 +1,6 @@
 {
     "name": "Nyzo",
-    "version": "2",
+    "version": "3",
     "description": "Send tips and pay for content with Nyzo",
 
     "permissions": [
@@ -9,7 +9,7 @@
     ],
 
     "browser_action": {
-        "default_title": "Send a Nyzo tip",
+        "default_title": "Send tips and pay for content with Nyzo",
         "default_icon": {
             "16": "images/nyzo-logo-16.png",
             "32": "images/nyzo-logo-32.png",
