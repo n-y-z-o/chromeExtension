@@ -10,71 +10,84 @@ document.addEventListener('DOMContentLoaded', function () {
     setTimeout(function() { document.body.style.display = 'block'; }, 100);
 
     // Start by getting the configuration information for the extension.
-    chrome.storage.local.get(['privateKey', 'baseTip', 'maximumMicropayAmount'], function(extensionConfiguration) {
+    chrome.storage.local.get(extensionConfigurationParameters, function(extensionConfiguration) {
 
         // If the configuration is valid, continue to get the payment information from the tab.
         if (isValidExtensionConfiguration(extensionConfiguration)) {
             // The configuration is correct, so the configure button is not needed.
             document.getElementById('configure-button').style.display = 'none';
 
-            chrome.tabs.getSelected(null, function(tab) {
-                chrome.tabs.sendMessage(tab.id, {action: 'getNyzoParameters'}, function(pageConfiguration) {
+            chrome.tabs.query({active: true, lastFocusedWindow: true }, function(tabs) {
+                if (isUndefined(tabs) || tabs.length == 0) {
+                    document.getElementById('page-notice').innerHTML = 'Unable to communicate with the page. ' +
+                        'Please reload.';
 
-                    // Configure the Micropay buttons.
-                    var micropayButtonsActive = false;
-                    var micropayConfigurations = isUndefined(pageConfiguration) ? [] :
-                         pageConfiguration.micropayConfigurations;
                     for (var i = 0; i < maximumMicropayConfigurations; i++) {
-                        var configuration = micropayConfigurations[i];
-                        if (i < micropayConfigurations.length) {
-                            var button = document.getElementById('micropay-button-' + i);
-                            button.micropayConfiguration = configuration;
-                            button.index = i;
-                            configureMicropayButton(button);
+                        document.getElementById('micropay-container-' + i).style.display = 'none';
+                        document.getElementById('divider-' + i).style.display = 'none';
+                    }
+                    document.getElementById('tip-container').style.display = 'none';
+
+                } else {
+                    chrome.tabs.sendMessage(tabs[0].id, {action: 'getNyzoParameters'}, function(pageConfiguration) {
+
+                        // Configure the Micropay buttons.
+                        var micropayButtonsActive = false;
+                        var micropayConfigurations = isUndefined(pageConfiguration) ? [] :
+                            pageConfiguration.micropayConfigurations;
+                        for (var i = 0; i < maximumMicropayConfigurations; i++) {
+                            var configuration = micropayConfigurations[i];
+                            if (i < micropayConfigurations.length) {
+                                var button = document.getElementById('micropay-button-' + i);
+                                button.micropayConfiguration = configuration;
+                                button.index = i;
+                                configureMicropayButton(button);
+                            } else {
+                                document.getElementById('micropay-container-' + i).style.display = 'none';
+                                document.getElementById('divider-' + i).style.display = 'none';
+                            }
+                        }
+
+                        // If the tip information is provided, configure the tip buttons.
+                        var tipConfiguration = isUndefined(pageConfiguration) ? null :
+                            pageConfiguration.tipConfiguration;
+                        if (isValidConfigurationForTips(tipConfiguration)) {
+
+                            var baseTipMicronyzos = getAmountMicronyzos(extensionConfiguration.baseTip);
+                            const multipliers = [1, 2, 5];
+                            multipliers.forEach(function (multiplier) {
+                                // Add the event listener to the button and store the payment configuration.
+                                var button = document.getElementById('send-tip-' + multiplier + 'x');
+                                button.addEventListener('click', function() { sendTransaction(this) });
+                                button.micropayConfiguration = new MicropayConfiguration(tipConfiguration.clientUrl,
+                                    tipConfiguration.receiverId, tipConfiguration.tag, tipConfiguration.displayName,
+                                    baseTipMicronyzos * multiplier);
+
+                                // Set the button text.
+                                button.innerHTML = printAmount(button.micropayConfiguration.amountMicronyzos);
+
+                                // Assign the notice div and hide.
+                                button.noticeDiv = document.getElementById('tip-notice');
+                                button.noticeDiv.style.display = 'none';
+                            });
                         } else {
-                            document.getElementById('micropay-container-' + i).style.display = 'none';
-                            document.getElementById('divider-' + i).style.display = 'none';
+                            document.getElementById('tip-container').style.display = 'none';
+                            if (micropayConfigurations.length > 0) {
+                                document.getElementById('divider-' +
+                                    (micropayConfigurations.length - 1)).style.display = 'none';
+                            }
                         }
-                    }
 
-                    // If the tip information is provided, configure the tip buttons.
-                    var tipConfiguration = isUndefined(pageConfiguration) ? null : pageConfiguration.tipConfiguration;
-                    if (isValidConfigurationForTips(tipConfiguration)) {
-
-                        var baseTipMicronyzos = getAmountMicronyzos(extensionConfiguration.baseTip);
-                        const multipliers = [1, 2, 5];
-                        multipliers.forEach(function (multiplier) {
-                            // Add the event listener to the button and store the payment configuration.
-                            var button = document.getElementById('send-tip-' + multiplier + 'x');
-                            button.addEventListener('click', function() { sendTransaction(this) });
-                            button.micropayConfiguration = new MicropayConfiguration(tipConfiguration.clientUrl,
-                                tipConfiguration.receiverId, tipConfiguration.tag, tipConfiguration.displayName,
-                                baseTipMicronyzos * multiplier);
-
-                            // Set the button text.
-                            button.innerHTML = printAmount(button.micropayConfiguration.amountMicronyzos);
-
-                            // Assign the notice div and hide.
-                            button.noticeDiv = document.getElementById('tip-notice');
-                            button.noticeDiv.style.display = 'none';
-                        });
-                    } else {
-                        document.getElementById('tip-container').style.display = 'none';
-                        if (micropayConfigurations.length > 0) {
-                          document.getElementById('divider-' + (micropayConfigurations.length - 1)).style.display =
-                              'none';
+                        if (isValidConfigurationForTips(tipConfiguration) || micropayConfigurations.length > 0) {
+                            document.getElementById('page-notice').style.display = 'none';
+                        } else if (chrome.runtime.lastError) {
+                            document.getElementById('page-notice').innerHTML = 'Unable to communicate with the page. ' +
+                                'Please reload.';
                         }
-                    }
 
-                    if (isValidConfigurationForTips(tipConfiguration) || micropayConfigurations.length > 0) {
-                        document.getElementById('page-notice').style.display = 'none';
-                    } else if (chrome.runtime.lastError) {
-                        document.getElementById('page-notice').innerHTML = 'Unable to communicate with the page. ' +
-                            'Please reload.';
-                    }
-
-                    document.body.style.display = 'block';
-                });
+                        document.body.style.display = 'block';
+                    });
+                }
             });
         } else {
             // The configuration is not valid, so the containers for sending tips and Micropay are not needed.
@@ -113,7 +126,7 @@ function configureMicropayButton(button) {
         } else {
             button.parentElement.style.display = 'block';
             button.style.display = 'inline-block';
-            if (configuration.amountMicronyzos <= extensionConfiguration.maximumMicropayAmount * 1000000) {
+            if (configuration.amountMicronyzos <= extensionConfiguration.maximumMicropayAmount * micronyzosPerNyzo) {
                 button.style.alpha = 1.0;
                 button.innerHTML = printAmount(configuration.amountMicronyzos);
                 button.classList.remove('notice-error');
@@ -153,7 +166,7 @@ function configureMicropayButton(button) {
 function sendTransaction(button) {
     // The tip buttons are already displayed, so all information should be correct. However, all parameters should still
     // be checked.
-    chrome.storage.local.get(['privateKey', 'baseTip', 'maximumMicropayAmount'], function(extensionConfiguration) {
+    chrome.storage.local.get(extensionConfigurationParameters, function(extensionConfiguration) {
         // If the configurations are valid, continue. This would previously fetch information from the tab. Now, it
         // takes information directly from the buttons to eliminate possible manipulation by the page changing its
         // information after popup loading.
@@ -216,7 +229,7 @@ function sendTransaction(button) {
                     }
 
                     // If successful, store the transaction and send a message to the tab.
-                    chrome.tabs.getSelected(null, function(tab) {
+                    chrome.tabs.query({active: true, lastFocusedWindow: true }, function(tabs) {
                         // Store the transaction in local storage.
                         var uniqueReferenceKey = uniqueReferenceKeyForMicropayConfiguration(micropayConfiguration);
                         var objectToStore = new Object();
@@ -224,7 +237,7 @@ function sendTransaction(button) {
                         chrome.storage.local.set(objectToStore);
 
                         // Notify the content script that the transaction is available.
-                        chrome.tabs.sendMessage(tab.id, {action: 'micropayTransactionAvailable',
+                        chrome.tabs.sendMessage(tabs[0].id, {action: 'micropayTransactionAvailable',
                             uniqueReferenceKey: uniqueReferenceKey, tag: micropayConfiguration.tag}, null);
                     });
                 }
@@ -238,12 +251,12 @@ function resendTransaction(button) {
     if (isValidConfigurationForMicropay(micropayConfiguration)) {
 
         // Send a message to the tab.
-        chrome.tabs.getSelected(null, function(tab) {
+        chrome.tabs.query({active: true, lastFocusedWindow: true }, function(tabs) {
             // Store the transaction in local storage.
             var uniqueReferenceKey = uniqueReferenceKeyForMicropayConfiguration(micropayConfiguration);
 
             // Notify the content script that the transaction is available.
-            chrome.tabs.sendMessage(tab.id, {action: 'micropayTransactionAvailable',
+            chrome.tabs.sendMessage(tabs[0].id, {action: 'micropayTransactionAvailable',
                 uniqueReferenceKey: uniqueReferenceKey, tag: micropayConfiguration.tag}, null);
         });
     }
@@ -275,20 +288,14 @@ function stringForArray(array) {
 }
 
 function isValidExtensionConfiguration(extensionConfiguration) {
-    // Verify the private key, tip amount, and maximum Micropay amount.
+    // Verify the private key, tip amount, maximum Micropay amount, and maximum automatic amount.
     return isValidPrivateKey(extensionConfiguration.privateKey) && isValidTipAmount(extensionConfiguration.baseTip) &&
-        isValidMaximumMicropayAmount(extensionConfiguration.maximumMicropayAmount);
-}
-
-function uniqueReferenceKeyForMicropayConfiguration(configuration) {
-    // The receiver ID and tag uniquely identify a Micropay resource. The amount can change over time, and a new amount
-    // should not automatically invalidate a previous transaction, especially if the new amount is less than the
-    // previous amount.
-    return configuration.receiverId + ':' + configuration.tag;
+        isValidMaximumMicropayAmount(extensionConfiguration.maximumMicropayAmount) &&
+        isValidMaximumAutomaticAmount(extensionConfiguration.maximumAutomaticAmount);
 }
 
 function openOptionsPage() {
-    var optionsUrl = chrome.extension.getURL('options.html');
+    var optionsUrl = chrome.runtime.getURL('options.html');
     chrome.tabs.query({url: optionsUrl}, function(tabs) {
         if (tabs.length) {
             chrome.tabs.update(tabs[0].id, {active: true});

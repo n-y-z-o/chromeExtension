@@ -1,4 +1,6 @@
 const genesisBlockHash = hexStringAsUint8Array('bc4cca2a2a50a229-256ae3f5b2b5cd49-aa1df1e2d0192726-c4bb41cdcea15364');
+const micronyzosPerNyzo = 1000000;
+const extensionConfigurationParameters = ['privateKey', 'baseTip', 'maximumMicropayAmount', 'maximumAutomaticAmount'];
 
 function isValidPrivateKey(keyString) {
     var valid = false;
@@ -23,17 +25,22 @@ function isValidPublicIdentifier(identifierString) {
 }
 
 function getAmountMicronyzos(valueString) {
-    return Math.floor(+valueString * 1000000);
+    return Math.floor(+valueString * micronyzosPerNyzo);
 }
 
 function isValidTipAmount(tipString) {
     var tipAmountMicronyzos = getAmountMicronyzos(tipString);
-    return tipAmountMicronyzos >= 2 && tipAmountMicronyzos <= 10 * 1000000;
+    return tipAmountMicronyzos >= 2 && tipAmountMicronyzos <= 10 * micronyzosPerNyzo;
 }
 
 function isValidMaximumMicropayAmount(micropayString) {
     var maximumAmountMicronyzos = getAmountMicronyzos(micropayString);
-    return maximumAmountMicronyzos >= 2 && maximumAmountMicronyzos <= 50 * 1000000;
+    return maximumAmountMicronyzos >= 2 && maximumAmountMicronyzos <= 50 * micronyzosPerNyzo;
+}
+
+function isValidMaximumAutomaticAmount(automaticString) {
+    var automaticAmountMicronyzos = getAmountMicronyzos(automaticString);
+    return automaticAmountMicronyzos >= 1 && automaticAmountMicronyzos <= micronyzosPerNyzo;
 }
 
 function isValidClientUrl(clientUrl) {

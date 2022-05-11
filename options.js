@@ -11,8 +11,12 @@ document.addEventListener('DOMContentLoaded', function () {
     var maximumMicropayAmountField = document.getElementById('maximumMicropayAmount');
     maximumMicropayAmountField.addEventListener('input', validateAndStoreMaximumMicropayAmount);
 
+    // Register the listener for the maximum automatic amount.
+    var maximumAutomaticAmountField = document.getElementById('maximumAutomaticAmount');
+    maximumAutomaticAmountField.addEventListener('input', validateAndStoreMaximumAutomaticAmount);
+
     // Load the values.
-    chrome.storage.local.get(['privateKey', 'baseTip', 'maximumMicropayAmount'], function(items) {
+    chrome.storage.local.get(extensionConfigurationParameters, function(items) {
         var privateKey = items.privateKey;
         if (typeof privateKey === 'string' && privateKey.length > 0) {
             privateKeyField.value = privateKey;
@@ -30,9 +34,15 @@ document.addEventListener('DOMContentLoaded', function () {
             maximumMicropayAmountField.value = maximumMicropayAmount;
         }
 
+        var maximumAutomaticAmount = items.maximumAutomaticAmount;
+        if (maximumAutomaticAmount != null) {
+            maximumAutomaticAmountField.value = maximumAutomaticAmount;
+        }
+
         validateAndStorePrivateKey();
         validateAndStoreBaseTip();
         validateAndStoreMaximumMicropayAmount();
+        validateAndStoreMaximumAutomaticAmount();
     });
 });
 
@@ -78,4 +88,15 @@ function validateAndStoreMaximumMicropayAmount() {
         maximumMicropayAmountField.className = 'input input-invalid';
     }
     chrome.storage.local.set({maximumMicropayAmount: maximumMicropayAmountValue});
+}
+
+function validateAndStoreMaximumAutomaticAmount() {
+    var maximumAutomaticAmountField = document.getElementById('maximumAutomaticAmount');
+    var maximumAutomaticAmountValue = maximumAutomaticAmountField.value;
+    if (isValidMaximumAutomaticAmount(maximumAutomaticAmountValue)) {
+        maximumAutomaticAmountField.className = 'input input-valid';
+    } else {
+        maximumAutomaticAmountField.className = 'input input-invalid';
+    }
+    chrome.storage.local.set({maximumAutomaticAmount: maximumAutomaticAmountValue});
 }
