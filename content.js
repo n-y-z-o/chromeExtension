@@ -114,7 +114,14 @@ function sendTransaction(micropayConfiguration) {
                         chrome.storage.local.set(objectToStore);
 
                         // Send an 'accepted' notification.
-                        const event = new CustomEvent('nyzo-transaction-accepted', { detail: micropayConfiguration });
+                        const detailObject = {
+                            tag: micropayConfiguration.tag,
+                            clientUrl: micropayConfiguration.clientUrl,
+                            amountMicronyzos: micropayConfiguration.amountMicronyzos,
+                            receiverId: micropayConfiguration.receiverId,
+                            transaction: transaction
+                        };
+                        const event = new CustomEvent('nyzo-transaction-accepted', { detail: detailObject });
                         document.dispatchEvent(event);
                     } else {
                         // Send a 'failed' notification.
