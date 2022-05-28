@@ -24,6 +24,22 @@ function isValidPublicIdentifier(identifierString) {
     return valid;
 }
 
+function publicIdentifierForPrivateKey(keyString) {
+    let identifierString = '';
+    if (typeof keyString === 'string') {
+        // Decode the key string.
+        keyString = keyString.trim();
+        let key = decode(keyString);
+        if (key != null && typeof key.getSeed() !== 'undefined') {
+            // Get the identifier for the key and make an identifier string.
+            let keyPair = nacl.sign.keyPair.fromSeed(key.getSeed());
+            identifierString = nyzoStringFromPublicIdentifier(keyPair.publicKey);
+        }
+    }
+
+    return identifierString;
+}
+
 function getAmountMicronyzos(valueString) {
     return Math.floor(+valueString * micronyzosPerNyzo);
 }

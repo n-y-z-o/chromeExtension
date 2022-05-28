@@ -2,6 +2,16 @@
 
 function initializeExtension() {
 
+    // Send the public identifier whenever the private key changes.
+    chrome.storage.onChanged.addListener(function(changes, namespace) {
+        if (!isUndefined(changes.privateKey)) {
+            sendPublicIdentifierToPage();
+        }
+    });
+
+    // Send an initial update of the public identifier.
+    sendPublicIdentifierToPage();
+
     document.addEventListener('nyzo-transaction-generated', function(event) {
 
         // If the amount is not defined, set it to μ1.
@@ -135,6 +145,14 @@ function sendTransaction(micropayConfiguration) {
             const event = new CustomEvent('nyzo-transaction-failed', { detail: micropayConfiguration });
             document.dispatchEvent(event);
         }
+    });
+}
+
+function sendPublicIdentifierToPage() {
+    chrome.storage.local.get(['privateKey'], function(extensionConfiguration) {
+        let publicIdentifier = publicIdentifierForPrivateKey(extensionConfiguration.privateKey);
+        const event = new CustomEvent('nyzo-public-identifier-configured', { detail: publicIdentifier });
+        document.dispatchEvent(event);
     });
 }
 
