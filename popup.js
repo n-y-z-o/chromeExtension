@@ -22,23 +22,25 @@ document.addEventListener('DOMContentLoaded', function () {
                     document.getElementById('page-notice').innerHTML = 'Unable to communicate with the page. ' +
                         'Please reload.';
 
+                    // Hide the micropay containers, the automatic container, and the tip container.
                     for (var i = 0; i < maximumMicropayConfigurations; i++) {
                         document.getElementById('micropay-container-' + i).style.display = 'none';
                         document.getElementById('divider-' + i).style.display = 'none';
                     }
+                    document.getElementById('automatic-container').style.display = 'none';
+                    document.getElementById('divider-' + maximumMicropayConfigurations).style.display = 'none';
                     document.getElementById('tip-container').style.display = 'none';
 
                 } else {
                     chrome.tabs.sendMessage(tabs[0].id, {action: 'getNyzoParameters'}, function(pageConfiguration) {
 
                         // Configure the Micropay buttons.
-                        var micropayButtonsActive = false;
-                        var micropayConfigurations = isUndefined(pageConfiguration) ? [] :
+                        let micropayConfigurations = isUndefined(pageConfiguration) ? [] :
                             pageConfiguration.micropayConfigurations;
-                        for (var i = 0; i < maximumMicropayConfigurations; i++) {
-                            var configuration = micropayConfigurations[i];
+                        for (let i = 0; i < maximumMicropayConfigurations; i++) {
+                            let configuration = micropayConfigurations[i];
                             if (i < micropayConfigurations.length) {
-                                var button = document.getElementById('micropay-button-' + i);
+                                let button = document.getElementById('micropay-button-' + i);
                                 button.micropayConfiguration = configuration;
                                 button.index = i;
                                 configureMicropayButton(button);
@@ -46,6 +48,16 @@ document.addEventListener('DOMContentLoaded', function () {
                                 document.getElementById('micropay-container-' + i).style.display = 'none';
                                 document.getElementById('divider-' + i).style.display = 'none';
                             }
+                        }
+
+                        // If an automatic authorization is provided, configure the section.
+                        let automaticConfiguration = isUndefined(pageConfiguration) ? null :
+                            pageConfiguration.automaticConfiguration;
+                        if (isValidAutomaticConfiguration(automaticConfiguration)) {
+                            configureAutomaticSection(automaticConfiguration);
+                        } else {
+                            document.getElementById('automatic-container').style.display = 'none';
+                            document.getElementById('divider-4').style.display = 'none';
                         }
 
                         // If the tip information is provided, configure the tip buttons.
@@ -72,13 +84,23 @@ document.addEventListener('DOMContentLoaded', function () {
                             });
                         } else {
                             document.getElementById('tip-container').style.display = 'none';
-                            if (micropayConfigurations.length > 0) {
-                                document.getElementById('divider-' +
-                                    (micropayConfigurations.length - 1)).style.display = 'none';
+
+                            // The tip container is the last container on the page. When it is not displayed, the last
+                            // visible divider should be hidden.
+                            let lastVisibleDivider = null;
+                            for (let i = 0; i < 5; i++) {
+                                let divider = document.getElementById('divider-' + i);
+                                if (divider.style.display != 'none') {
+                                    lastVisibleDivider = divider;
+                                }
+                            }
+                            if (lastVisibleDivider != null) {
+                                lastVisibleDivider.style.display = 'none';
                             }
                         }
 
-                        if (isValidConfigurationForTips(tipConfiguration) || micropayConfigurations.length > 0) {
+                        if (isValidConfigurationForTips(tipConfiguration) || micropayConfigurations.length > 0 ||
+                            isValidAutomaticConfiguration(automaticConfiguration)) {
                             document.getElementById('page-notice').style.display = 'none';
                         } else if (chrome.runtime.lastError) {
                             document.getElementById('page-notice').innerHTML = 'Unable to communicate with the page. ' +
@@ -90,12 +112,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             });
         } else {
-            // The configuration is not valid, so the containers for sending tips and Micropay are not needed.
+            // The configuration is not valid, none of the Micropay elements are needed.
             document.getElementById('tip-container').style.display = 'none';
+            document.getElementById('automatic-container').style.display = 'none';
             for (var i = 0; i < 4; i++) {
                 document.getElementById('micropay-container-' + i).style.display = 'none';
                 document.getElementById('divider-' + i).style.display = 'none';
             }
+            document.getElementById('divider-4').style.display = 'none';
             document.getElementById('page-notice').style.display = 'none';
             document.getElementById('configure-button').addEventListener('click', openOptionsPage);
 
@@ -159,6 +183,81 @@ function configureMicropayButton(button) {
         if (transaction === null) {
             button.refreshButton.style.display = 'none';
             button.clearButton.style.display = 'none';
+        }
+    });
+}
+
+function configureAutomaticSection(configuration) {
+    // Check the authorization amount. If the current authorization is below the minimum amount, display the
+    // authorization button.
+    const key = 'authorizedAutomaticAmount_' + configuration.receiverId;
+    chrome.storage.local.get([key, 'maximumAutomaticAuthorization'], function(result) {
+        let currentAmount = Number.parseFloat(result[key]);
+        if (!(currentAmount > 0.0)) {  // handles both NaN and negative numbers
+            currentAmount = 0.0;
+        }
+
+        const automaticButton = document.getElementById('automatic-button');
+        const minimumAmount = configuration.minimumAmount * micronyzosPerNyzo;
+        if (currentAmount < minimumAmount) {
+            // When the current authorization is less than the minimum required, additional authorization should be
+            // requested. Limit the recommended amount by the maximum automatic authorization..
+            const requestAmount = Math.min(configuration.recommendedAmount, result.maximumAutomaticAuthorization) *
+                micronyzosPerNyzo;
+
+            if (requestAmount < minimumAmount) {
+                // If the request amount is less than the minimum, display a notice.
+                automaticButton.style.display = 'none';
+                document.getElementById('automatic-notice').innerHTML = 'Your configured maximum automatic ' +
+                    'authorization of ' + printAmount(result.maximumAutomaticAuthorization * micronyzosPerNyzo) +
+                    ' is less than this page\'s minimum authorization of ' + printAmount(minimumAmount) +
+                    '. Please increase your maximum automatic authorization if you wish to use this page.';
+            } else {
+                // Otherwise, configure the authorization button.
+                automaticButton.dataset.requestAmount = requestAmount;
+                automaticButton.dataset.receiverId = configuration.receiverId;
+                automaticButton.innerHTML = 'Click to authorize ' + printAmount(requestAmount) +
+                    ' in automatic transactions to account <span class="public-identifier">' +
+                    configuration.receiverId + '</span>';
+                automaticButton.addEventListener('click', function() { automaticButtonClicked(this) });
+
+                // The notice is unnecessary when the button is displayed.
+                document.getElementById('automatic-notice').style.display = 'none';
+            }
+        } else {
+            // When the current authorization is at or above the minimum, display a message showing the amount.
+            automaticButton.style.display = 'none';
+            document.getElementById('automatic-notice').innerHTML = 'The current Micropay authorization of ' +
+                printAmount(currentAmount) + ' to account <span class="public-identifier">' +
+                configuration.receiverId + '</span> is sufficient for this page';
+        }
+    });
+}
+
+function automaticButtonClicked(button) {
+    chrome.storage.local.get('maximumAutomaticAuthorization', function(result) {
+        // Apply another check to ensure the authorization amount does not exceed the maximum. This is redundant but
+        // prudent.
+        const authorizationAmount = Math.min(result.maximumAutomaticAuthorization * micronyzosPerNyzo,
+            button.dataset.requestAmount);
+
+        if (isValidPublicIdentifier(button.dataset.receiverId)) {
+            // If the receiver identifier is valid, store the new authorization.
+            const key = 'authorizedAutomaticAmount_' + button.dataset.receiverId;
+            chrome.storage.local.set({[key]: authorizationAmount});
+
+            // Hide the button and display a success message in the notice div.
+            button.style.display = 'none';
+            const automaticNotice = document.getElementById('automatic-notice');
+            automaticNotice.innerHTML = 'Authorized ' + printAmount(authorizationAmount) +
+                ' in automatic transactions to account <span class="public-identifier">' + button.dataset.receiverId +
+                '</span>';
+            automaticNotice.style.display = 'block';
+        } else {
+            // Otherwise, display an error.
+            button.style.display = 'none';
+            automaticNotice.innerHTML = 'An unexpected error occurred';
+            automaticNotice.style.display = 'block';
         }
     });
 }
@@ -228,17 +327,18 @@ function sendTransaction(button) {
                         notice.innerHTML = messageString;
                     }
 
-                    // If successful, store the transaction and send a message to the tab.
-                    chrome.tabs.query({active: true, lastFocusedWindow: true }, function(tabs) {
-                        // Store the transaction in local storage.
-                        var uniqueReferenceKey = uniqueReferenceKeyForMicropayConfiguration(micropayConfiguration);
-                        var objectToStore = new Object();
-                        objectToStore[uniqueReferenceKey] = transaction;
-                        chrome.storage.local.set(objectToStore);
+                    // Store the transaction in local storage.
+                    var uniqueReferenceKey = uniqueReferenceKeyForMicropayConfiguration(micropayConfiguration);
+                    var objectToStore = new Object();
+                    objectToStore[uniqueReferenceKey] = transaction;
+                    chrome.storage.local.set(objectToStore);
 
-                        // Notify the content script that the transaction is available.
-                        chrome.tabs.sendMessage(tabs[0].id, {action: 'micropayTransactionAvailable',
-                            uniqueReferenceKey: uniqueReferenceKey, tag: micropayConfiguration.tag}, null);
+                    // Send the transaction to the tab.
+                    chrome.tabs.query({active: true, lastFocusedWindow: true }, function(tabs) {
+                        if (tabs.length > 0) {
+                            chrome.tabs.sendMessage(tabs[0].id, {action: 'micropayTransactionAvailable',
+                                uniqueReferenceKey: uniqueReferenceKey, tag: micropayConfiguration.tag}, null);
+                        }
                     });
                 }
             );
@@ -252,12 +352,14 @@ function resendTransaction(button) {
 
         // Send a message to the tab.
         chrome.tabs.query({active: true, lastFocusedWindow: true }, function(tabs) {
-            // Store the transaction in local storage.
-            var uniqueReferenceKey = uniqueReferenceKeyForMicropayConfiguration(micropayConfiguration);
+            if (tabs.length > 0) {
+                // Get the reference key for the transaction.
+                var uniqueReferenceKey = uniqueReferenceKeyForMicropayConfiguration(micropayConfiguration);
 
-            // Notify the content script that the transaction is available.
-            chrome.tabs.sendMessage(tabs[0].id, {action: 'micropayTransactionAvailable',
-                uniqueReferenceKey: uniqueReferenceKey, tag: micropayConfiguration.tag}, null);
+                // Notify the content script that the transaction is available.
+                chrome.tabs.sendMessage(tabs[0].id, {action: 'micropayTransactionAvailable',
+                    uniqueReferenceKey: uniqueReferenceKey, tag: micropayConfiguration.tag}, null);
+            }
         });
     }
 }
@@ -287,11 +389,21 @@ function stringForArray(array) {
     return result.trim();
 }
 
+function isValidAutomaticConfiguration(automaticConfiguration) {
+    // This function only indicates whether the automatic configuration is valid in isolation. It does not indicate
+    // whether the automatic configuration is compatible with the current extension settings.
+    return automaticConfiguration != null && isValidPublicIdentifier(automaticConfiguration.receiverId) &&
+        automaticConfiguration.minimumAmount > 0 &&
+        automaticConfiguration.recommendedAmount >= automaticConfiguration.minimumAmount;
+}
+
 function isValidExtensionConfiguration(extensionConfiguration) {
-    // Verify the private key, tip amount, maximum Micropay amount, and maximum automatic amount.
+    // Verify the private key, tip amount, maximum Micropay amount, maximum automatic amount, and maximum automatic
+    // authorization amount.
     return isValidPrivateKey(extensionConfiguration.privateKey) && isValidTipAmount(extensionConfiguration.baseTip) &&
         isValidMaximumMicropayAmount(extensionConfiguration.maximumMicropayAmount) &&
-        isValidMaximumAutomaticAmount(extensionConfiguration.maximumAutomaticAmount);
+        isValidMaximumAutomaticAmount(extensionConfiguration.maximumAutomaticAmount) &&
+        isValidMaximumAutomaticAuthorization(extensionConfiguration.maximumAutomaticAuthorization);
 }
 
 function openOptionsPage() {

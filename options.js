@@ -15,6 +15,10 @@ document.addEventListener('DOMContentLoaded', function () {
     var maximumAutomaticAmountField = document.getElementById('maximumAutomaticAmount');
     maximumAutomaticAmountField.addEventListener('input', validateAndStoreMaximumAutomaticAmount);
 
+    // Register the listener for the maximum automatic authorization.
+    var maximumAutomaticAuthorizationField = document.getElementById('maximumAutomaticAuthorization');
+    maximumAutomaticAuthorizationField.addEventListener('input', validateAndStoreMaximumAutomaticAuthorization);
+
     // Load the values.
     chrome.storage.local.get(extensionConfigurationParameters, function(items) {
         var privateKey = items.privateKey;
@@ -39,10 +43,16 @@ document.addEventListener('DOMContentLoaded', function () {
             maximumAutomaticAmountField.value = maximumAutomaticAmount;
         }
 
+        var maximumAutomaticAuthorization = items.maximumAutomaticAuthorization;
+        if (maximumAutomaticAuthorization != null) {
+            maximumAutomaticAuthorizationField.value = maximumAutomaticAuthorization;
+        }
+
         validateAndStorePrivateKey();
         validateAndStoreBaseTip();
         validateAndStoreMaximumMicropayAmount();
         validateAndStoreMaximumAutomaticAmount();
+        validateAndStoreMaximumAutomaticAuthorization();
     });
 });
 
@@ -99,4 +109,15 @@ function validateAndStoreMaximumAutomaticAmount() {
         maximumAutomaticAmountField.className = 'input input-invalid';
     }
     chrome.storage.local.set({maximumAutomaticAmount: maximumAutomaticAmountValue});
+}
+
+function validateAndStoreMaximumAutomaticAuthorization() {
+    var maximumAutomaticAuthorizationField = document.getElementById('maximumAutomaticAuthorization');
+    var maximumAutomaticAuthorizationValue = maximumAutomaticAuthorizationField.value;
+    if (isValidMaximumAutomaticAuthorization(maximumAutomaticAuthorizationValue)) {
+        maximumAutomaticAuthorizationField.className = 'input input-valid';
+    } else {
+        maximumAutomaticAuthorizationField.className = 'input input-invalid';
+    }
+    chrome.storage.local.set({maximumAutomaticAuthorization: maximumAutomaticAuthorizationValue});
 }
