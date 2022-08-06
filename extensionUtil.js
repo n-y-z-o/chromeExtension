@@ -2,6 +2,7 @@ const genesisBlockHash = hexStringAsUint8Array('bc4cca2a2a50a229-256ae3f5b2b5cd4
 const micronyzosPerNyzo = 1000000;
 const extensionConfigurationParameters = ['privateKey', 'baseTip', 'maximumMicropayAmount', 'maximumAutomaticAmount',
     'maximumAutomaticAuthorization'];
+const maximumSenderDataLength = 32;
 
 function isValidPrivateKey(keyString) {
     var valid = false;
@@ -90,10 +91,13 @@ function sanitizeString(string) {
 }
 
 function cleanTag(tag) {
+    // Previously, the tag was limited to 32 characters and non-word characters were removed. Now, the tag will be
+    // limited to 67 characters to provide support for normalized sender-data strings, and all characters are allowed.
+    // This allows new functionality without breaking previous functionality.
     if (typeof tag !== 'string') {
         tag = '';
     }
-    return tag.replace(/[^\w_]/g, '').substring(0, 32);
+    return tag.substring(0, 67);
 }
 
 function cleanDisplayName(name) {

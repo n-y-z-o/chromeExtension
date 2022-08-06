@@ -160,7 +160,7 @@ function sendTransaction(micropayConfiguration) {
             const privateKey = decode(extensionConfiguration.privateKey).getSeed();
             const receiverIdentifierArray = decode(micropayConfiguration.receiverId).getIdentifier();
             const amountMicronyzos = micropayConfiguration.amountMicronyzos;
-            const senderData = stringAsUint8Array(micropayConfiguration.tag);
+            const senderData = senderDataAsUint8Array(micropayConfiguration.tag);
             const clientUrl = micropayConfiguration.clientUrl;
             submitTransaction(timestamp, privateKey, receiverIdentifierArray, amountMicronyzos, senderData, clientUrl,
                 function(success, messages, warnings, errors, transaction) {

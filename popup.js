@@ -70,7 +70,10 @@ document.addEventListener('DOMContentLoaded', function () {
                             multipliers.forEach(function (multiplier) {
                                 // Add the event listener to the button and store the payment configuration.
                                 var button = document.getElementById('send-tip-' + multiplier + 'x');
-                                button.addEventListener('click', function() { sendTransaction(this) });
+                                if (!button.listenerAdded) {
+                                    button.addEventListener('click', function() { sendTransaction(this) });
+                                    button.listenerAdded = true;
+                                }
                                 button.micropayConfiguration = new MicropayConfiguration(tipConfiguration.clientUrl,
                                     tipConfiguration.receiverId, tipConfiguration.tag, tipConfiguration.displayName,
                                     baseTipMicronyzos * multiplier);
@@ -136,7 +139,10 @@ function configureMicropayButton(button) {
         'Micropay: <span style="font-style: italic;">' + configuration.displayName + '</span>';
 
     // Add the event listener to the button.
-    button.addEventListener('click', function() { sendTransaction(this) });
+    if (!button.listenerAdded) {
+        button.addEventListener('click', function() { sendTransaction(this) });
+        button.listenerAdded = true;
+    }
 
     const uniqueReferenceKey = uniqueReferenceKeyForMicropayConfiguration(configuration);
     chrome.storage.local.get([uniqueReferenceKey, 'maximumMicropayAmount'], function(extensionConfiguration) {
@@ -175,7 +181,10 @@ function configureMicropayButton(button) {
 
         // Assign the refresh and clear buttons. Hide if no transaction.
         button.refreshButton = document.getElementById('micropay-refresh-' + button.index);
-        button.refreshButton.addEventListener('click', function() { resendTransaction(this) });
+        if (!button.refreshButton.listenerAdded) {
+            button.refreshButton.addEventListener('click', function() { resendTransaction(this) });
+            button.refreshButton.listenerAdded = true;
+        }
         button.refreshButton.micropayConfiguration = configuration;
         button.clearButton = document.getElementById('micropay-clear-' + button.index);
         button.clearButton.addEventListener('click', function() { clearTransaction(this) });
@@ -263,8 +272,8 @@ function automaticButtonClicked(button) {
 }
 
 function sendTransaction(button) {
-    // The tip buttons are already displayed, so all information should be correct. However, all parameters should still
-    // be checked.
+    // The buttons are already displayed, so all information should be correct. However, all parameters should still be
+    // checked.
     chrome.storage.local.get(extensionConfigurationParameters, function(extensionConfiguration) {
         // If the configurations are valid, continue. This would previously fetch information from the tab. Now, it
         // takes information directly from the buttons to eliminate possible manipulation by the page changing its
@@ -298,7 +307,7 @@ function sendTransaction(button) {
             var senderData = micropayConfiguration.tag;
             var clientUrl = micropayConfiguration.clientUrl;
             submitTransaction(timestamp, privateKey, receiverIdentifierArray, amountMicronyzos,
-                stringAsUint8Array(senderData), clientUrl,
+                senderDataAsUint8Array(senderData), clientUrl,
                 function(success, messages, warnings, errors, transaction) {
 
                     // Style the notice div.
