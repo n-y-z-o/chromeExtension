@@ -2,6 +2,7 @@ class Transaction {
 
     constructor() {
         this.timestamp = Date.now();
+        this.type = 2;
         this.amount = 0;
         this.recipientIdentifier = new Uint8Array(32);
         this.previousHashHeight = 0;
@@ -20,7 +21,7 @@ class Transaction {
     }
 
     setRecipientIdentifier(recipientIdentifier) {
-        for (var i = 0; i < 32; i++) {
+        for (let i = 0; i < 32; i++) {
             this.recipientIdentifier[i] = recipientIdentifier[i];
         }
     }
@@ -30,15 +31,27 @@ class Transaction {
     }
 
     setPreviousBlockHash(previousBlockHash) {
-        for (var i = 0; i < 32; i++) {
+        for (let i = 0; i < 32; i++) {
             this.previousBlockHash[i] = previousBlockHash[i];
+        }
+    }
+
+    setSenderIdentifier(senderIdentifier) {
+        for (let i = 0; i < 32; i++) {
+            this.senderIdentifier[i] = senderIdentifier[i];
         }
     }
 
     setSenderData(senderData) {
         this.senderData = new Uint8Array(Math.min(senderData.length, 32));
-        for (var i = 0; i < this.senderData.length; i++) {
+        for (let i = 0; i < this.senderData.length; i++) {
             this.senderData[i] = senderData[i];
+        }
+    }
+
+    setSignature(signature) {
+        for (let i = 0; i < 64; i++) {
+            this.signature[i] = signature[i];
         }
     }
 
@@ -91,14 +104,15 @@ class Transaction {
         buffer.initializeWithArray(array);
 
         const transaction = new Transaction();
-        buffer.readShort();
+        transaction.type = buffer.readByte();
         transaction.setTimestamp(buffer.readLong());
-        transaction.setAmount(buffer.readLong);
+        transaction.setAmount(buffer.readLong());
         transaction.setRecipientIdentifier(buffer.readBytes(32));
         transaction.setPreviousHashHeight(buffer.readLong());
+        transaction.setSenderIdentifier(buffer.readBytes(32));
         const dataLength = buffer.readByte();
         transaction.setSenderData(buffer.readBytes(dataLength));
-        transaction.signature = buffer.readBytes(64);
+        transaction.setSignature(buffer.readBytes(64));
 
         return transaction;
     }

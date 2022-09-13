@@ -67,6 +67,9 @@ function decode(encodedString) {
 
     var result = null;
 
+    // Trim the string.
+    encodedString = encodedString.trim();
+
     // Map characters from the old encoding to the new encoding. A few characters were changed to make Nyzo strings more
     // URL-friendly.
     encodedString = encodedString.replace(/\*/g, '-').replace(/\+/g, '.').replace(/=/g, '~');

@@ -69,7 +69,7 @@ function loadValue(field, name, defaultValue) {
 
 function validateAndStorePrivateKey() {
     var privateKeyField = document.getElementById('privateKey');
-    var privateKeyValue = privateKeyField.value;
+    var privateKeyValue = privateKeyField.value.trim();
     if (isValidPrivateKey(privateKeyValue)) {
         privateKeyField.className = 'input input-valid';
     } else {

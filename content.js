@@ -133,7 +133,22 @@ function loadConfigurationFromPage() {
         recommendedAmount: automaticRecommendedAmount, displayName: automaticDisplayName};
 }
 
+const mutexAvailable = 0;
+const mutexClaimed = 1;
+let automaticAuthorizationMutex = mutexAvailable;
+
 function sendTransaction(micropayConfiguration) {
+    if (automaticAuthorizationMutex == mutexAvailable) {
+        // If the mutex was available, claim it and send the transaction.
+        automaticAuthorizationMutex = mutexClaimed;
+        sendTransactionTarget(micropayConfiguration);
+    } else {
+        // Otherwise, schedule the transaction to be sent 20 milliseconds later.
+        setTimeout(function() { sendTransaction(micropayConfiguration); }, 20);
+    }
+}
+
+function sendTransactionTarget(micropayConfiguration) {
 
     const authorizationKey = 'authorizedAutomaticAmount_' + micropayConfiguration.receiverId;
     const keys = ['privateKey', 'maximumAutomaticAmount', authorizationKey];
@@ -154,6 +169,9 @@ function sendTransaction(micropayConfiguration) {
             const adjustedAuthorization = extensionConfiguration[authorizationKey] -
                 micropayConfiguration.amountMicronyzos;
             chrome.storage.local.set({[authorizationKey]: adjustedAuthorization});
+
+            // The authorization has been updated, so the mutex can be released.
+            automaticAuthorizationMutex = mutexAvailable;
 
             // Gather the information and submit the transaction.
             const timestamp = Date.now() + 10000;
@@ -185,14 +203,55 @@ function sendTransaction(micropayConfiguration) {
                         document.dispatchEvent(event);
                     } else {
                         // Send a 'failed' notification.
-                        const event = new CustomEvent('nyzo-transaction-failed', { detail: micropayConfiguration });
+                        const detailObject = {
+                            tag: micropayConfiguration.tag,
+                            clientUrl: micropayConfiguration.clientUrl,
+                            amountMicronyzos: micropayConfiguration.amountMicronyzos,
+                            receiverId: micropayConfiguration.receiverId,
+                            errors: errors
+                        };
+                        const event = new CustomEvent('nyzo-transaction-failed', { detail: detailObject });
                         document.dispatchEvent(event);
                     }
                 }
             );
         } else {
+            // The transaction will not be sent, so the automatic authorization mutex can be released.
+            automaticAuthorizationMutex = mutexAvailable;
+
+            // Build the errors array.
+            let errors = [];
+            if (!isValidPrivateKey(extensionConfiguration.privateKey)) {
+                errors.push('Extension private key is not valid.');
+            }
+            if (!isValidMaximumAutomaticAmount(extensionConfiguration.maximumAutomaticAmount)) {
+                errors.push('Extension maximum automatic amount is not valid.');
+            }
+            if (micropayConfiguration.amountMicronyzos > maximumAutomaticAmountMicronyzos) {
+                errors.push('Transaction amount is greater than the configured maximum.');
+            }
+            if (!isValidClientUrl(micropayConfiguration.clientUrl)) {
+                errors.push('Client URL is not valid.');
+            }
+            if (!isValidPublicIdentifier(micropayConfiguration.receiverId)) {
+                errors.push('Receiver ID is not valid.');
+            }
+            if (micropayConfiguration.tag == null) {
+                errors.push('Transaction tag is null.');
+            }
+            if (micropayConfiguration.tag.length == 0) {
+                errors.push('Transaction tag is empty.');
+            }
+
             // Send a 'failed' notification.
-            const event = new CustomEvent('nyzo-transaction-failed', { detail: micropayConfiguration });
+            const detailObject = {
+                tag: micropayConfiguration.tag,
+                clientUrl: micropayConfiguration.clientUrl,
+                amountMicronyzos: micropayConfiguration.amountMicronyzos,
+                receiverId: micropayConfiguration.receiverId,
+                errors: errors
+            };
+            const event = new CustomEvent('nyzo-transaction-failed', { detail: detailObject });
             document.dispatchEvent(event);
         }
     });
